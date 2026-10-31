@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+  <title>Wobbly Shopping Cart 🛒⚡ | 4,000 RPM Defective Caster Mayhem</title>
+  <meta name="description" content="Navigate a chaotic supermarket parking lot with a shopping cart sporting one catastrophically broken caster wheel spinning at 4,000 RPM. Dodge runaway pigeons, speed bumps, and oil slicks while fighting violent centrifugal drift!">
+
+  <!-- Custom Inline SVG Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23111827'/%3E%3Cpath d='M12 16 L20 16 L28 40 L48 40 L54 22 L22 22' fill='none' stroke='%2338bdf8' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cline x1='28' y1='28' x2='50' y2='28' stroke='%2338bdf8' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='32' y1='34' x2='46' y2='34' stroke='%2338bdf8' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='30' cy='48' r='4' fill='%2394a3b8'/%3E%3Ccircle cx='46' cy='48' r='5' fill='%23ef4444' stroke='%23fbbf24' stroke-width='2'/%3E%3Cpath d='M46 41 L47 43 L50 44 L48 46 L49 49 L46 47 L43 49 L44 46 L42 44 L45 43 Z' fill='%23fbbf24'/%3E%3Ccircle cx='54' cy='45' r='1.5' fill='%23f97316'/%3E%3Ccircle cx='51' cy='53' r='1' fill='%23eab308'/%3E%3C/svg%3E">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Fullscreen Game Canvas -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Top Navigation & Telemetry HUD -->
+  <header class="hud-header">
+    <div class="hud-brand">
+      <div class="hud-icon">🛒</div>
+      <div class="hud-title-wrap">
+        <h1 class="hud-title">Wobbly Shopping Cart</h1>
+        <div class="hud-subtitle">MegaMart Lot C • Model: RustGlide 3000</div>
+      </div>
+    </div>
+
+    <!-- Centered Gauges: RPM & Drift Status -->
+    <div class="hud-gauges">
+      <!-- Defective Wheel RPM Meter -->
+      <div class="gauge-box rpm-box" title="Rotation speed of defective front-right wheel">
+        <div class="gauge-label">
+          <span class="pulse-dot"></span> CASTER WHEEL RPM
+        </div>
+        <div class="gauge-value" id="rpm-display">
+          <span class="digits" id="rpm-digits">3,850</span>
+          <span class="unit">RPM</span>
+        </div>
+        <div class="gauge-bar-track">
+          <div class="gauge-bar-fill" id="rpm-bar" style="width: 78%;"></div>
+        </div>
+      </div>
+
+      <!-- Drift / Centrifugal Force Warning -->
+      <div class="gauge-box drift-box" title="Centrifugal pull caused by broken caster vibration">
+        <div class="gauge-label">CENTRIFUGAL DRIFT</div>
+        <div class="gauge-value" id="drift-status">VIOLENT RIGHT</div>
+        <div class="drift-indicator">
+          <span class="drift-arrow left">◀</span>
+          <div class="drift-level-bar">
+            <div class="drift-needle" id="drift-needle" style="left: 82%;"></div>
+          </div>
+          <span class="drift-arrow right active">▶▶</span>
+        </div>
+      </div>
+
+      <!-- Stats: Pigeons & Groceries -->
+      <div class="gauge-box stats-box">
+        <div class="stat-row" title="Runaway pigeons scattered by your squeaking terror">
+          <span class="stat-icon">🐦</span>
+          <span class="stat-label">Pigeons Spooked:</span>
+          <span class="stat-num" id="pigeons-count">0</span>
+        </div>
+        <div class="stat-row" title="Groceries remaining securely inside basket">
+          <span class="stat-icon">🥖</span>
+          <span class="stat-label">Groceries Loaded:</span>
+          <span class="stat-num" id="groceries-count">6 / 6</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Right Interactive Utility Buttons -->
+    <div class="hud-actions">
+      <button id="btn-sound" class="hud-pill-btn" title="Toggle Procedural Audio [M]">
+        <span id="sound-icon">🔊</span>
+        <span id="sound-text">AUDIO ON</span>
+      </button>
+
+      <button id="btn-lighting" class="hud-pill-btn" title="Cycle Parking Lot Time [L]">
+        <span id="lighting-icon">☀️</span>
+        <span id="lighting-text">DAY</span>
+      </button>
+
+      <button id="btn-intercom" class="hud-pill-btn special-btn" title="Supermarket Parking Lot PA Announcement [P]">
+        <span>📢</span>
+        <span>LOT PA</span>
+      </button>
+
+      <button id="btn-inspect" class="hud-pill-btn" title="Inspect Defective Cart Tag [I]">
+        <span>🏷️</span>
+        <span>INSPECT</span>
+      </button>
+
+      <button id="btn-help" class="hud-pill-btn icon-only" title="Controls & Story [?]">
+        <span>❓</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Toast Notification / Intercom Broadcast Banner -->
+  <div id="toast-banner" class="toast-banner" aria-live="polite">
+    <div class="toast-content">
+      <span class="toast-icon" id="toast-icon">📢</span>
+      <span class="toast-message" id="toast-text">MegaMart PA: "Attention shoppers, please mind the drifting cart near Row 4."</span>
+    </div>
+  </div>
+
+  <!-- In-Game Controls & Action Bar -->
+  <div class="hud-bottom-bar">
+    <div class="controls-hint" id="desktop-controls-hint">
+      <span class="key-combo"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span> or <span class="key-combo">Click & Drag</span> to push
+      <span class="divider">•</span>
+      <span class="key-combo"><kbd>Shift</kbd> / <kbd>Space</kbd></span> Turbo Push
+      <span class="divider">•</span>
+      <span class="key-combo"><kbd>K</kbd></span> Kick Wheel
+      <span class="divider">•</span>
+      <span class="key-combo"><kbd>H</kbd></span> Ding Bell
+    </div>
+
+    <!-- Action Buttons for Mobile or Quick Click -->
+    <div class="action-buttons-wrap">
+      <button id="btn-bell" class="action-btn bell-btn" title="Ring Squeaky Bicycle Bell [H]">
+        <span class="btn-emoji">🔔</span>
+        <span class="btn-caption">DING BELL</span>
+      </button>
+
+      <button id="btn-kick" class="action-btn kick-btn" title="Violently Kick Defective Caster [K]">
+        <span class="btn-emoji">👢</span>
+        <span class="btn-caption">KICK WHEEL</span>
+      </button>
+
+      <button id="btn-turbo" class="action-btn turbo-btn" title="Hold to Sprint / Turbo Push [Shift/Space]">
+        <span class="btn-emoji">💨</span>
+        <span class="btn-caption">TURBO PUSH</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Touch Joystick (Active on Touch / Mobile) -->
+  <div id="touch-joystick-zone" class="touch-joystick-zone">
+    <div id="touch-joystick-base" class="touch-joystick-base">
+      <div id="touch-joystick-stick" class="touch-joystick-stick"></div>
+    </div>
+  </div>
+
+  <!-- Easter Egg Modal: Cart Inspection Certificate -->
+  <div id="inspect-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="inspect-title">
+    <div class="modal-card inspection-card">
+      <button class="modal-close-btn" id="inspect-close-btn" aria-label="Close Inspection Modal">&times;</button>
+      <div class="inspection-header">
+        <div class="inspection-stamp">APPROVED-ISH</div>
+        <h2 id="inspect-title" class="inspection-title">MEGAMART EQUIPMENT COMPLIANCE</h2>
+        <div class="inspection-code">TAG #CR-8831-WOBBLE • LOT C</div>
+      </div>
+
+      <div class="inspection-body">
+        <div class="cart-diagram-preview">
+          <div class="wheel-diagram">
+            <div class="diagram-cart-body">
+              <span class="groceries-peek">🥖🥫🧻</span>
+            </div>
+            <span class="wheel-node tl ok" title="Rear Left: OK">●</span>
+            <span class="wheel-node tr ok" title="Rear Right: OK">●</span>
+            <span class="wheel-node bl ok" title="Front Left: OK">●</span>
+            <span class="wheel-node br broken" title="Front Right: 4,000 RPM CATASTROPHE">💥 4,000 RPM</span>
+          </div>
+        </div>
+
+        <table class="inspection-table">
+          <tr>
+            <th>Component</th>
+            <th>Condition</th>
+            <th>Technician Notes</th>
+          </tr>
+          <tr>
+            <td>Rear Wheel L</td>
+            <td><span class="badge ok">GOOD</span></td>
+            <td>Rolls relatively straight. Slightly sticky.</td>
+          </tr>
+          <tr>
+            <td>Rear Wheel R</td>
+            <td><span class="badge ok">GOOD</span></td>
+            <td>Chewed by stray raccoons in 2024. Functional.</td>
+          </tr>
+          <tr>
+            <td>Front Wheel L</td>
+            <td><span class="badge ok">FAIR</span></td>
+            <td>Swivels 360°. Coated in old caramel syrup.</td>
+          </tr>
+          <tr>
+            <td>Front Wheel R</td>
+            <td><span class="badge danger">CRITICAL</span></td>
+            <td>Bearing melted. Ball bearings replaced with loose gravel and peppermint candy. Spins at 4,000 RPM with violent rightward torque. DO NOT KICK.</td>
+          </tr>
+          <tr>
+            <td>Wire Mesh</td>
+            <td><span class="badge ok">AGED</span></td>
+            <td>Holds 6 heavy items. Tends to eject baguettes on speed bumps.</td>
+          </tr>
+        </table>
+
+        <div class="inspector-signature">
+          <div class="sig-line">
+            <span class="sig-name">Gary "The Wrench" Kowalski</span>
+            <span class="sig-title">Senior Lot Operations & Cart Defense</span>
+          </div>
+          <div class="sig-date">Date: Yesterday at 4:15 PM</div>
+        </div>
+      </div>
+
+      <div class="inspection-footer">
+        <button id="btn-kick-from-modal" class="modal-action-btn danger">👢 KICK WHEEL RIGHT NOW</button>
+        <button id="btn-close-inspect" class="modal-action-btn secondary">BACK TO PARKING LOT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help & Story Modal -->
+  <div id="help-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="help-title">
+    <div class="modal-card help-card">
+      <button class="modal-close-btn" id="help-close-btn" aria-label="Close Help Modal">&times;</button>
+      <h2 id="help-title" class="help-title">🛒 The Legend of the Wobbly Cart</h2>
+      
+      <div class="help-body">
+        <p>You have been assigned <strong>Cart #4092</strong> at the MegaMart 24/7 parking lot. Three of its wheels are somewhat cooperative. The fourth caster wheel has achieved centrifugal sentience and rotates at <strong>4,000 RPM</strong>, pulling you violently to the starboard side at all times.</p>
+        
+        <h3>🎯 How to Survive:</h3>
+        <ul>
+          <li><strong>Steering:</strong> Counter-steer constantly to fight the demonic rightward drift.</li>
+          <li><strong>Pigeons:</strong> Pigeons love roaming for french fries. Charge through them to scatter them into the sky!</li>
+          <li><strong>Speed Bumps:</strong> Hit them at speed to jump, but beware: your groceries might bounce right out!</li>
+          <li><strong>Oil Slicks:</strong> Dark iridescent oil puddles eliminate all wheel friction. Prepare for 720° spins.</li>
+          <li><strong>Parked Cars:</strong> Don't smash too hard or you'll trip the anti-theft alarms.</li>
+          <li><strong>Kicking the Wheel:</strong> Press <kbd>K</kbd> to deliver a calibrated steel-toed kick. It might briefly silence the squeak... or cause an RPM overload!</li>
+        </ul>
+
+        <div class="shortcuts-grid">
+          <div class="sc-item"><kbd>W</kbd> / <kbd>▲</kbd> Push Forward</div>
+          <div class="sc-item"><kbd>S</kbd> / <kbd>▼</kbd> Reverse / Brake</div>
+          <div class="sc-item"><kbd>A</kbd> / <kbd>◀</kbd> Counter-Steer Left</div>
+          <div class="sc-item"><kbd>D</kbd> / <kbd>▶</kbd> Steer Right</div>
+          <div class="sc-item"><kbd>Shift</kbd> / <kbd>Space</kbd> Turbo Push</div>
+          <div class="sc-item"><kbd>K</kbd> Kick Broken Wheel</div>
+          <div class="sc-item"><kbd>H</kbd> Ding Handlebar Bell</div>
+          <div class="sc-item"><kbd>M</kbd> Mute / Unmute Audio</div>
+          <div class="sc-item"><kbd>L</kbd> Cycle Day / Sunset / Night</div>
+          <div class="sc-item"><kbd>P</kbd> Store Intercom PA</div>
+        </div>
+      </div>
+
+      <div class="help-footer">
+        <button id="btn-close-help" class="modal-action-btn primary">LET'S ROLL 🛒💨</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio unlock banner (if browser blocks initial autoplay) -->
+  <div id="audio-prompt-banner" class="audio-prompt-banner">
+    <span>🎵 Click anywhere or press any key to unleash procedural audio!</span>
+  </div>
+
+  <script src="app.js"></script>
+
+<script>window.__BORED_AI_SLUG__="wobbly-shopping-cart";</script>
+<script src="report-widget.js"></script>
+</body>
+</html>

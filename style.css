@@ -1,0 +1,969 @@
+/* ==========================================================================
+   Bored AI Web — Wobbly Shopping Cart 🛒⚡
+   ========================================================================== */
+
+:root {
+  --bg-color: #0f172a;
+  --surface-color: rgba(15, 23, 42, 0.85);
+  --surface-border: rgba(255, 255, 255, 0.12);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --accent-blue: #38bdf8;
+  --accent-amber: #fbbf24;
+  --accent-danger: #ef4444;
+  --accent-success: #22c55e;
+  --accent-purple: #c084fc;
+  --hud-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #0b0f19;
+  font-family: var(--font-family);
+  color: var(--text-main);
+  touch-action: none;
+}
+
+#game-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 1;
+  background: #1e293b;
+}
+
+/* ==========================================================================
+   Top HUD Header
+   ========================================================================== */
+
+.hud-header {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  pointer-events: none;
+}
+
+.hud-header > * {
+  pointer-events: auto;
+}
+
+.hud-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface-color);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 8px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--hud-shadow);
+}
+
+.hud-icon {
+  font-size: 28px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+  animation: subtle-wobble 2s infinite ease-in-out;
+}
+
+@keyframes subtle-wobble {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-4deg); }
+  75% { transform: rotate(4deg); }
+}
+
+.hud-title-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.hud-title {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.hud-subtitle {
+  font-size: 11px;
+  color: var(--accent-amber);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ==========================================================================
+   Center Gauges (RPM, Drift, Pigeons)
+   ========================================================================== */
+
+.hud-gauges {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gauge-box {
+  background: var(--surface-color);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--surface-border);
+  border-radius: 14px;
+  padding: 8px 14px;
+  box-shadow: var(--hud-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+}
+
+.gauge-label {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--accent-danger);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--accent-danger);
+  animation: blink 0.8s infinite alternate;
+}
+
+@keyframes blink {
+  0% { opacity: 0.3; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1.2); }
+}
+
+.rpm-box {
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.gauge-value {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 900;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: #fff;
+}
+
+.rpm-box .digits {
+  color: #ffedd5;
+  text-shadow: 0 0 10px rgba(249, 115, 22, 0.6);
+}
+
+.gauge-value .unit {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.gauge-bar-track {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.gauge-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  border-radius: 3px;
+  transition: width 0.1s linear;
+}
+
+/* Drift box */
+.drift-box {
+  border-color: rgba(251, 191, 36, 0.35);
+  min-width: 155px;
+}
+
+#drift-status {
+  font-size: 14px;
+  color: #fde047;
+  letter-spacing: 0.02em;
+}
+
+.drift-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.drift-arrow {
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.4;
+  font-family: var(--font-mono);
+}
+
+.drift-arrow.active {
+  color: var(--accent-danger);
+  opacity: 1;
+  font-weight: bold;
+  animation: pulse-arrow 0.5s infinite alternate;
+}
+
+@keyframes pulse-arrow {
+  from { transform: translateX(0); }
+  to { transform: translateX(2px); }
+}
+
+.drift-level-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  position: relative;
+}
+
+.drift-needle {
+  position: absolute;
+  top: -2px;
+  width: 8px;
+  height: 10px;
+  background: var(--accent-danger);
+  border-radius: 2px;
+  box-shadow: 0 0 8px var(--accent-danger);
+  transform: translateX(-50%);
+  transition: left 0.15s ease-out;
+}
+
+/* Stats box */
+.stats-box {
+  min-width: 150px;
+  justify-content: center;
+  gap: 6px;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.stat-icon {
+  font-size: 14px;
+}
+
+.stat-label {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.stat-num {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: #fff;
+  margin-left: auto;
+}
+
+/* ==========================================================================
+   HUD Action Buttons (Right)
+   ========================================================================== */
+
+.hud-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hud-pill-btn {
+  background: var(--surface-color);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--surface-border);
+  color: var(--text-main);
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: var(--hud-shadow);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hud-pill-btn:hover {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.hud-pill-btn:active {
+  transform: translateY(1px);
+}
+
+.hud-pill-btn.special-btn {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(249, 115, 22, 0.25));
+  border-color: rgba(249, 115, 22, 0.5);
+  color: #ffedd5;
+}
+
+.hud-pill-btn.special-btn:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(249, 115, 22, 0.4));
+  box-shadow: 0 0 16px rgba(249, 115, 22, 0.4);
+}
+
+.hud-pill-btn.icon-only {
+  padding: 8px 10px;
+}
+
+/* ==========================================================================
+   Toast / Supermarket PA Banner
+   ========================================================================== */
+
+.toast-banner {
+  position: absolute;
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  z-index: 15;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 90vw;
+}
+
+.toast-banner.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.toast-content {
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid var(--accent-amber);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 10px 20px;
+  border-radius: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(251, 191, 36, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-family);
+  font-size: 13px;
+  font-weight: 600;
+  color: #fef08a;
+  text-align: center;
+}
+
+.toast-icon {
+  font-size: 18px;
+  animation: bell-ding 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes bell-ding {
+  from { transform: rotate(-8deg); }
+  to { transform: rotate(8deg); }
+}
+
+/* ==========================================================================
+   Bottom Action Bar & Controls Hint
+   ========================================================================== */
+
+.hud-bottom-bar {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+  gap: 16px;
+}
+
+.hud-bottom-bar > * {
+  pointer-events: auto;
+}
+
+.controls-hint {
+  background: var(--surface-color);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--surface-border);
+  padding: 8px 16px;
+  border-radius: 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+  box-shadow: var(--hud-shadow);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.controls-hint kbd {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.3);
+}
+
+.controls-hint .divider {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.action-buttons-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.action-btn {
+  background: var(--surface-color);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--surface-border);
+  padding: 10px 18px;
+  border-radius: 14px;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: var(--hud-shadow);
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+}
+
+.action-btn:active {
+  transform: translateY(1px) scale(0.97);
+}
+
+.action-btn .btn-emoji {
+  font-size: 18px;
+}
+
+.bell-btn {
+  border-color: rgba(56, 189, 248, 0.4);
+}
+.bell-btn:hover {
+  background: rgba(14, 165, 233, 0.2);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+}
+
+.kick-btn {
+  border-color: rgba(239, 68, 68, 0.5);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(185, 28, 28, 0.3));
+}
+.kick-btn:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(185, 28, 28, 0.5));
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+}
+
+.turbo-btn {
+  border-color: rgba(251, 191, 36, 0.5);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.35));
+}
+.turbo-btn:hover, .turbo-btn.active {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.5), rgba(217, 119, 6, 0.6));
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.6);
+}
+
+/* ==========================================================================
+   Touch Joystick (Mobile)
+   ========================================================================== */
+
+.touch-joystick-zone {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  width: 130px;
+  height: 130px;
+  z-index: 12;
+  display: none; /* Shown dynamically on touch devices */
+}
+
+.touch-joystick-base {
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px dashed rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+}
+
+.touch-joystick-stick {
+  width: 50px;
+  height: 50px;
+  background: radial-gradient(circle at 35% 35%, #60a5fa, #2563eb);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  position: absolute;
+  transform: translate(0, 0);
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   Modals: Inspection Certificate & Help
+   ========================================================================== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  opacity: 1;
+  visibility: visible;
+  transition: all 0.25s ease;
+}
+
+.modal-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.modal-card {
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+  position: relative;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: modal-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modal-pop {
+  from { transform: scale(0.92) translateY(12px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.modal-close-btn:hover {
+  background: rgba(239, 68, 68, 0.6);
+}
+
+/* Inspection Card specifics */
+.inspection-card {
+  background: #fdfbf7;
+  color: #1e293b;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+}
+
+.inspection-card .modal-close-btn {
+  background: rgba(0, 0, 0, 0.08);
+  color: #334155;
+}
+.inspection-card .modal-close-btn:hover {
+  background: #ef4444;
+  color: #fff;
+}
+
+.inspection-header {
+  position: relative;
+  border-bottom: 2px dashed #cbd5e1;
+  padding-bottom: 16px;
+}
+
+.inspection-stamp {
+  position: absolute;
+  top: 0;
+  right: 36px;
+  border: 3px solid #dc2626;
+  color: #dc2626;
+  font-family: var(--font-mono);
+  font-weight: 900;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transform: rotate(-8deg);
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+
+.inspection-title {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+.inspection-code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* Visual Diagram inside modal */
+.cart-diagram-preview {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.wheel-diagram {
+  position: relative;
+  width: 140px;
+  height: 180px;
+}
+
+.diagram-cart-body {
+  position: absolute;
+  inset: 20px 16px;
+  border: 3px solid #64748b;
+  background: #f1f5f9;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.wheel-node {
+  position: absolute;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.wheel-node.tl { top: 6px; left: 6px; }
+.wheel-node.tr { top: 6px; right: 6px; }
+.wheel-node.bl { bottom: 6px; left: 6px; }
+.wheel-node.br {
+  bottom: 0px;
+  right: -24px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  animation: pulse-danger 0.6s infinite alternate;
+}
+
+@keyframes pulse-danger {
+  from { transform: scale(1); box-shadow: 0 0 4px #ef4444; }
+  to { transform: scale(1.1); box-shadow: 0 0 12px #ef4444; }
+}
+
+.inspection-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.inspection-table th, .inspection-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.inspection-table th {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.badge.ok {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badge.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.inspector-signature {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  border-top: 1px dashed #cbd5e1;
+  padding-top: 14px;
+  margin-top: 10px;
+}
+
+.sig-name {
+  font-style: italic;
+  font-family: "Brush Script MT", cursive, sans-serif;
+  font-size: 20px;
+  color: #1e3a8a;
+  display: block;
+}
+
+.sig-title {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.sig-date {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #64748b;
+}
+
+.inspection-footer {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.modal-action-btn {
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.modal-action-btn.primary {
+  background: var(--accent-blue);
+  color: #0f172a;
+}
+.modal-action-btn.primary:hover {
+  background: #7dd3fc;
+}
+
+.modal-action-btn.danger {
+  background: var(--accent-danger);
+  color: #fff;
+}
+.modal-action-btn.danger:hover {
+  background: #dc2626;
+}
+
+.modal-action-btn.secondary {
+  background: #e2e8f0;
+  color: #334155;
+}
+.modal-action-btn.secondary:hover {
+  background: #cbd5e1;
+}
+
+/* Help Modal specifics */
+.help-card h2 {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.help-body {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #cbd5e1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.help-body ul {
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shortcuts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sc-item {
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sc-item kbd {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: #fff;
+}
+
+/* ==========================================================================
+   Audio Unlock Banner
+   ========================================================================== */
+
+.audio-prompt-banner {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid var(--accent-blue);
+  color: #e0f2fe;
+  padding: 10px 20px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(56, 189, 248, 0.3);
+  z-index: 50;
+  pointer-events: none;
+  animation: float-prompt 1.5s infinite ease-in-out;
+  transition: opacity 0.3s ease;
+}
+
+.audio-prompt-banner.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes float-prompt {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-6px); }
+}
+
+/* ==========================================================================
+   Responsive Adaptations
+   ========================================================================== */
+
+@media (max-width: 900px) {
+  .hud-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .hud-brand {
+    order: 1;
+  }
+  .hud-actions {
+    order: 2;
+    margin-left: auto;
+  }
+  .hud-gauges {
+    order: 3;
+    width: 100%;
+    justify-content: space-between;
+  }
+  .gauge-box {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 10px;
+  }
+  .controls-hint {
+    display: none;
+  }
+  .touch-joystick-zone {
+    display: block;
+  }
+}
+
+@media (max-width: 600px) {
+  .hud-subtitle {
+    display: none;
+  }
+  .hud-pill-btn span:not(:first-child) {
+    display: none;
+  }
+  .hud-pill-btn {
+    padding: 8px 10px;
+  }
+  .action-btn .btn-caption {
+    display: none;
+  }
+  .action-btn {
+    padding: 10px 14px;
+  }
+  .gauge-value {
+    font-size: 15px;
+  }
+}
